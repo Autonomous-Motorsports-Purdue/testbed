@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="device_ip" default="" />
     <group ns="zed">
         <!-- Nodelet Manager -->
         <node pkg="nodelet" type="nodelet"
@@ -19,6 +20,12 @@
             command="load" />
             <param name="zed_nodelet_name" value="zed_nodelet" />
         </node>
+    </group>
+    <group ns="lidar">
+        <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
+
+            <arg name="device_ip" value="$(arg device_ip)" />
+        </include>
     </group>
     <group ns="rtabmap">
         <node pkg="nodelet" type="nodelet" name="rgbd_sync"
