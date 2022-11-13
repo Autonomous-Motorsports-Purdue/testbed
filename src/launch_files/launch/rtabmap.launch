@@ -1,28 +1,23 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="device_ip" default="" />
+    <arg name="zed_manager" default="zed_nodelet_manager" />
+    <arg name="lidar_manager" default="velodyne_nodelet_manager" />
     <group ns="zed">
         <!-- Nodelet Manager -->
         <node pkg="nodelet" type="nodelet"
-        name="zed_nodelet_manager" args="manager"
-        output="screen" />
+        name="$(arg zed_manager)" args="manager" output="screen" />
         <!-- Load ZED Wrapper nodelet -->
         <include file="$(find zed_wrapper)/launch/include/zed_camera_nodelet.launch">
 
             <arg name="camera_name" value="zed" />
             <arg name="camera_model" value="zed" />
+            <arg name="nodelet_manager_name"
+            value="$(arg zed_manager)" />
         </include>
-        <!-- Start zed_nodelets/RgbdSensorSyncNodelet -->
-        <node pkg="nodelet" type="nodelet" name="zed_nodelet_sync"
-        args="load zed_nodelets/RgbdSensorSyncNodelet zed_nodelet_manager"
-        output="screen">
-            <rosparam file="$(find zed_wrapper)/params/sync.yaml"
-            command="load" />
-            <param name="zed_nodelet_name" value="zed_nodelet" />
-        </node>
         <!-- Start rtabmap_ros/stereo_sync -->
         <node pkg="nodelet" type="nodelet" name="stereo_sync"
-        args="load rtabmap_ros/stereo_sync zed_nodelet_manager"
+        args="load rtabmap_ros/stereo_sync $(arg zed_manager)"
         output="screen">
             <remap from="right/image_rect"
             to="/zed/zed_nodelet/right/image_rect_color" />
@@ -38,23 +33,24 @@
     <group ns="lidar">
         <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
 
-            <arg name="device_ip" value="$(arg device_ip)" />
+            <arg name="manager" value="$(arg lidar_manager)" />
+            <arg name="frame_id" value="/base_link" />
         </include>
     </group>
     <group ns="rtabmap">
-        <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap"
-        output="screen" args="--delete_db_on_start">
+        <node name="rtabmapviz" pkg="rtabmap_ros" type="rtabmapviz"
+        output="screen" args="_frame_id=base_link">
             <param name="frame_id" type="string"
             value="base_link" />
             <param name="subscribe_depth" type="bool"
             value="false" />
             <param name="subscribe_rgbd" type="bool"
             value="true" />
-            <param name="subscribe_scan" type="bool"
+            <param name="subscribe_scan_cloud" type="bool"
             value="true" />
-            <remap from="odom" to="/base_controller/odom" />
-            <remap from="scan" to="/base_scan" />
-            <remap from="rgbd_image" to="rgbd_image" />
+            <remap from="odom" to="/zed/zed_nodelet/odom" />
+            <remap from="scan_cloud" to="/lidar/velodyne_points" />
+            <remap from="rgbd_image" to="/zed/rgbd_image" />
             <param name="queue_size" type="int" value="10" />
             <!-- RTAB-Map's parameters -->
             <param name="RGBD/NeighborLinkRefining" type="string"
@@ -80,7 +76,5 @@
             <param name="Icp/MaxCorrespondenceDistance"
             type="string" value="0.1" />
         </node>
-        <node name="rtabmapviz" pkg="rtabmap_ros" type="rtabmapviz"
-        args="_frame_id:=base_link" />
     </group>
 </launch>
